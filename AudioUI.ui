@@ -122,9 +122,9 @@
    <widget class="QTextBrowser" name="OpLogBrowser">
     <property name="geometry">
      <rect>
-      <x>720</x>
+      <x>560</x>
       <y>40</y>
-      <width>351</width>
+      <width>511</width>
       <height>531</height>
      </rect>
     </property>
@@ -132,7 +132,7 @@
    <widget class="QLabel" name="OpLogLabel">
     <property name="geometry">
      <rect>
-      <x>720</x>
+      <x>560</x>
       <y>10</y>
       <width>131</width>
       <height>31</height>
@@ -153,7 +153,7 @@
    <widget class="QPushButton" name="ClearLogBtn">
     <property name="geometry">
      <rect>
-      <x>720</x>
+      <x>980</x>
       <y>580</y>
       <width>75</width>
       <height>41</height>
@@ -163,21 +163,11 @@
      <string>ClearLog</string>
     </property>
    </widget>
-   <widget class="QListView" name="CaseListView">
-    <property name="geometry">
-     <rect>
-      <x>340</x>
-      <y>40</y>
-      <width>291</width>
-      <height>531</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QLabel" name="TestCaseLabel">
     <property name="geometry">
      <rect>
-      <x>350</x>
-      <y>15</y>
+      <x>310</x>
+      <y>20</y>
       <width>161</width>
       <height>21</height>
      </rect>
@@ -197,7 +187,7 @@
    <widget class="QPushButton" name="StartTestCaseBtn">
     <property name="geometry">
      <rect>
-      <x>340</x>
+      <x>310</x>
       <y>580</y>
       <width>91</width>
       <height>41</height>
@@ -205,6 +195,29 @@
     </property>
     <property name="text">
      <string>Start</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="TestCaseRefreshBtn">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>580</y>
+      <width>91</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Refresh</string>
+    </property>
+   </widget>
+   <widget class="QListWidget" name="TestCaseListWidget">
+    <property name="geometry">
+     <rect>
+      <x>310</x>
+      <y>40</y>
+      <width>191</width>
+      <height>531</height>
+     </rect>
     </property>
    </widget>
   </widget>

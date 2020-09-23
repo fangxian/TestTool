@@ -13,6 +13,7 @@ def qt_test():
     testToolUI.setSignalSlot()
     testToolUI.loadSerialPort()
     testToolUI.addSerialBitRateItems()
+    testToolUI.loadTestCase()
     first_window.show()
     sys.exit(app.exec())
 # This is a sample Python script.

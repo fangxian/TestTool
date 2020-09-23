@@ -3,15 +3,21 @@ import serial
 import serial.tools.list_ports
 import os
 import time
+import json
 
 logpath = os.getcwd()+'\\logs'
+configpath = os.getcwd()+'\\config'
+
 class AudioToolUI(Ui_MainWindow):
     def __init__(self, MainWindow):
         super().setupUi(MainWindow)
         self.ser = None
         self.fp = None
         self.parameter = None
+        self.testCaseName = None
         self.isRenamed = False
+        self.configMap = {}
+        self.serialWriteSuccess = False
         if os.path.exists(logpath):
             pass
         else:
@@ -21,12 +27,14 @@ class AudioToolUI(Ui_MainWindow):
         if self.fp is not None:
             self.fp.close()
             if self.isRenamed is False:
-                if self.parameter is not None:
-                    dst = self.logfile + '-' + self.parameter + '.log'
+                if self.testCaseName is not None:
+                    dst = self.logfile + '-' + self.testCaseName + '.log'
                 else:
                     dst = self.logfile + '.log'
+        os.rename(self.logfile, dst)
         if self.ser is not None:
             self.ser.close()
+
     # set slot
     def setSignalSlot(self):
         self.SerialRefreshBtn.clicked.connect(self.on_SerialRefreshBtn_clicked)
@@ -34,7 +42,26 @@ class AudioToolUI(Ui_MainWindow):
         self.SerialSendMsgBtn.clicked.connect(self.on_SerialSendMsgBtn_clicked)
         self.StartTestCaseBtn.clicked[bool].connect(self.on_StartTestCaseBtn_clicked)
         self.ClearLogBtn.clicked.connect(self.on_ClearLogBtn_clicked)
+        self.TestCaseRefreshBtn.clicked.connect(self.on_TestCaseRefreshBtn_clicked)
 
+    # walk json config files
+    def loadTestCase(self):
+        configFiles = os.listdir(configpath)
+        self.TestCaseListWidget.addItems(configFiles)
+        for f in configFiles:
+            configFile = configpath + '\\' + f
+            with open(configFile, 'r') as load_f:
+                try:
+                    data = json.load(load_f)
+                    self.configMap[f] = json.dumps(data)
+                except Exception as e:
+                    self.log(f.__str__() + " " + e.__str__())
+
+
+    def on_TestCaseRefreshBtn_clicked(self):
+        self.configMap.clear()
+        self.TestCaseListWidget.clear()
+        self.loadTestCase()
 
     def on_StartTestCaseBtn_clicked(self):
         '''
@@ -43,34 +70,36 @@ class AudioToolUI(Ui_MainWindow):
         :return: none
         '''
         if self.StartTestCaseBtn.text() == 'Start':
-            # read testcase
-            self.testCaseName = ''
+            self.testCaseName = self.TestCaseListWidget.currentItem().text()
             self.log("start test case: " + self.testCaseName)
-            #TODO parse parameter config, store test case name
-            self.StartTestCaseBtn.setText("Stop")
+            self.parameter = self.configMap[self.testCaseName]
+            self.log("parameters: " +self.parameter)
+            self.serialWriteMsg(self.parameter)
+            if self.serialWriteSuccess is True:
+                self.StartTestCaseBtn.setText("Stop")
         else:
+
+            self.serialWriteMsg("StopTestCase")
+            if self.serialWriteSuccess is False:
+                return
+            self.StartTestCaseBtn.setText("Start")
             self.log("stop test case: " + self.testCaseName)
             self.fp.close()
             self.fp = None
-            if self.parameter is not None:
-                dst = self.logfile + '-' + self.parameter + '.log'
+            if self.testCaseName is not None:
+                dst = self.logfile + '-' + self.testCaseName + '.log'
             else:
                 dst = self.logfile + '.log'
             os.rename(self.logfile, dst)
             self.isRenamed = True
-            #TODO send stop command
-
-            self.StartTestCaseBtn.setText("Start")
+            self.testCaseName = None
 
     # SerialSendMsgBtn click event
     def on_SerialSendMsgBtn_clicked(self):
         commandMsg = self.CommandLineEdit.text()
         #TODO parse command to store test case name
-        print("command msg: ", commandMsg)
-        if self.ser is not None:
-            self.ser.write(commandMsg.encode("utf-8"))
-        else:
-            self.log("serial has not open")
+        self.serialWriteSuccess(commandMsg)
+
 
     # SerialRefreshBtn click event
     def on_SerialRefreshBtn_clicked(self):
@@ -92,6 +121,7 @@ class AudioToolUI(Ui_MainWindow):
         else:
             try:
                 self.ser.close()
+                self.ser = None
                 self.log("close serial port: " + self.portx)
                 self.SerialOpenBtn.setText("Open")
             except Exception as e:
@@ -121,9 +151,21 @@ class AudioToolUI(Ui_MainWindow):
         self.fp.writelines(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))+': ' + str + '\n')
         self.OpLogBrowser.append(str)
 
-
     def on_ClearLogBtn_clicked(self):
         self.OpLogBrowser.clear()
 
-    def ExceptionProcess(self, e):
+    def exceptionProcess(self, e):
         self.log("Exception: " + e.__str__)
+
+    def serialWriteMsg(self, str):
+        if self.ser is not None:
+            self.ser.write(str.encode("utf-8"))
+            self.log("serial write msg: " + str)
+            self.serialWriteSuccess = True
+        else:
+            self.log("ser has not been open, cannot write msg: " + str)
+            self.serialWriteSuccess = False
+
+
+    def serialReadData(self):
+        pass
