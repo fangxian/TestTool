@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1092</width>
-    <height>766</height>
+    <width>1133</width>
+    <height>804</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,10 +17,10 @@
    <widget class="QWidget" name="SerialWidget" native="true">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>40</y>
-      <width>261</width>
-      <height>251</height>
+      <x>10</x>
+      <y>20</y>
+      <width>251</width>
+      <height>231</height>
      </rect>
     </property>
     <widget class="QComboBox" name="SerialPortQCB">
@@ -99,7 +99,7 @@
      <property name="geometry">
       <rect>
        <x>170</x>
-       <y>220</y>
+       <y>200</y>
        <width>81</width>
        <height>21</height>
       </rect>
@@ -112,27 +112,48 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>180</y>
+       <y>160</y>
        <width>241</width>
        <height>31</height>
       </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Times New Roman</family>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Serial</string>
      </property>
     </widget>
    </widget>
    <widget class="QTextBrowser" name="OpLogBrowser">
     <property name="geometry">
      <rect>
-      <x>560</x>
+      <x>620</x>
       <y>40</y>
-      <width>511</width>
-      <height>531</height>
+      <width>461</width>
+      <height>621</height>
      </rect>
     </property>
    </widget>
    <widget class="QLabel" name="OpLogLabel">
     <property name="geometry">
      <rect>
-      <x>560</x>
+      <x>620</x>
       <y>10</y>
       <width>131</width>
       <height>31</height>
@@ -153,8 +174,8 @@
    <widget class="QPushButton" name="ClearLogBtn">
     <property name="geometry">
      <rect>
-      <x>980</x>
-      <y>580</y>
+      <x>630</x>
+      <y>670</y>
       <width>75</width>
       <height>41</height>
      </rect>
@@ -166,7 +187,7 @@
    <widget class="QLabel" name="TestCaseLabel">
     <property name="geometry">
      <rect>
-      <x>310</x>
+      <x>290</x>
       <y>20</y>
       <width>161</width>
       <height>21</height>
@@ -187,8 +208,8 @@
    <widget class="QPushButton" name="StartTestCaseBtn">
     <property name="geometry">
      <rect>
-      <x>310</x>
-      <y>580</y>
+      <x>290</x>
+      <y>670</y>
       <width>91</width>
       <height>41</height>
      </rect>
@@ -200,8 +221,8 @@
    <widget class="QPushButton" name="TestCaseRefreshBtn">
     <property name="geometry">
      <rect>
-      <x>410</x>
-      <y>580</y>
+      <x>430</x>
+      <y>670</y>
       <width>91</width>
       <height>41</height>
      </rect>
@@ -213,10 +234,10 @@
    <widget class="QListWidget" name="TestCaseListWidget">
     <property name="geometry">
      <rect>
-      <x>310</x>
+      <x>290</x>
       <y>40</y>
-      <width>191</width>
-      <height>531</height>
+      <width>251</width>
+      <height>621</height>
      </rect>
     </property>
    </widget>
@@ -226,7 +247,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1092</width>
+     <width>1133</width>
      <height>23</height>
     </rect>
    </property>

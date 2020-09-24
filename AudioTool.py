@@ -4,36 +4,59 @@ import serial.tools.list_ports
 import os
 import time
 import json
-
+import threading
+import multiprocessing
+from PyQt5.QtCore import QThread, pyqtSignal
+from AudioDataProcess import DataShow, drawImage
+import cv2 as cv
 logpath = os.getcwd()+'\\logs'
 configpath = os.getcwd()+'\\config'
+
+
+class DrawImageThread(QThread):
+    def __init__(self, audioTool):
+        super(DrawImageThread, self).__init__()
+        self.audioTool = audioTool
+
+    def run(self):
+        while self.audioTool.threadRun:
+            if self.audioTool.isStarted:
+                self.audioTool.dataShow.showImage()
+                # self.queue.put(self.dataShow.testReadFile())
+            time.sleep(0.01)
 
 class AudioToolUI(Ui_MainWindow):
     def __init__(self, MainWindow):
         super().setupUi(MainWindow)
         self.ser = None
         self.fp = None
-        self.parameter = None
+        self.parameterStr = None
         self.testCaseName = None
         self.isRenamed = False
+        self.isStarted = False
         self.configMap = {}
         self.serialWriteSuccess = False
+        self.parameterMap = {}
+        self.dataShow = DataShow(self)
+
+
+        #self.dataShowThread = threading.Thread(target=self.serialReadData)
+        #self.queue = multiprocessing.Queue()
+        self.threadRun = True
+        #self.dataShowProcess = multiprocessing.Process(target=drawImage, args=(self.queue, self.threadRun))
+
+        #self.dataShowThread.start()
+        #self.dataShowProcess.start()
+
+        self.qtthread = DrawImageThread(self)
+        self.qtthread.start()
         if os.path.exists(logpath):
             pass
         else:
             os.mkdir(logpath)
 
     def __del__(self):
-        if self.fp is not None:
-            self.fp.close()
-            if self.isRenamed is False:
-                if self.testCaseName is not None:
-                    dst = self.logfile + '-' + self.testCaseName + '.log'
-                else:
-                    dst = self.logfile + '.log'
-        os.rename(self.logfile, dst)
-        if self.ser is not None:
-            self.ser.close()
+        print("done")
 
     # set slot
     def setSignalSlot(self):
@@ -53,6 +76,7 @@ class AudioToolUI(Ui_MainWindow):
             with open(configFile, 'r') as load_f:
                 try:
                     data = json.load(load_f)
+                    self.parameterMap = data
                     self.configMap[f] = json.dumps(data)
                 except Exception as e:
                     self.log(f.__str__() + " " + e.__str__())
@@ -72,16 +96,19 @@ class AudioToolUI(Ui_MainWindow):
         if self.StartTestCaseBtn.text() == 'Start':
             self.testCaseName = self.TestCaseListWidget.currentItem().text()
             self.log("start test case: " + self.testCaseName)
-            self.parameter = self.configMap[self.testCaseName]
-            self.log("parameters: " +self.parameter)
-            self.serialWriteMsg(self.parameter)
+            self.parameterStr = self.configMap[self.testCaseName]
+            self.log("parameters: " + self.parameterStr)
+            self.serialWriteMsg(self.parameterStr)
+            #cv.namedWindow("ADC data", cv.WINDOW_NORMAL)
             if self.serialWriteSuccess is True:
+                self.isStarted = True
                 self.StartTestCaseBtn.setText("Stop")
         else:
-
             self.serialWriteMsg("StopTestCase")
             if self.serialWriteSuccess is False:
                 return
+
+            self.isStarted = False
             self.StartTestCaseBtn.setText("Start")
             self.log("stop test case: " + self.testCaseName)
             self.fp.close()
@@ -118,6 +145,7 @@ class AudioToolUI(Ui_MainWindow):
                 self.SerialOpenBtn.setText("Close")
             except Exception as e:
                 self.log("Exception: " + e.__str__())
+                self.ser.close()
         else:
             try:
                 self.ser.close()
@@ -166,6 +194,31 @@ class AudioToolUI(Ui_MainWindow):
             self.log("ser has not been open, cannot write msg: " + str)
             self.serialWriteSuccess = False
 
-
+    # a new thread to recv data and show
     def serialReadData(self):
+        while self.threadRun:
+            if self.isStarted:
+                self.dataShow.showImage()
+                #self.queue.put(self.dataShow.testReadFile())
+            time.sleep(0.01)
+
+    def dataProcess(self):
         pass
+
+    def relase(self):
+        self.threadRun = False
+        #self.dataShowThread.join()
+        #self.dataShowProcess.join(1)
+        if self.ser is not None:
+            if self.isStarted:
+                self.serialWriteMsg("StopTestCase")
+            self.ser.close()
+        if self.fp is not None:
+            self.fp.close()
+            if self.isRenamed is False:
+                if self.testCaseName is not None:
+                    dst = self.logfile + '-' + self.testCaseName + '.log'
+                else:
+                    dst = self.logfile + '.log'
+                os.rename(self.logfile, dst)
+

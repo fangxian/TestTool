@@ -15,7 +15,8 @@ def qt_test():
     testToolUI.addSerialBitRateItems()
     testToolUI.loadTestCase()
     first_window.show()
-    sys.exit(app.exec())
+    app.exec()
+    testToolUI.relase()
 # This is a sample Python script.
 
 # Press Shift+F10 to execute it or replace it with your code.
