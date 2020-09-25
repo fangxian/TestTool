@@ -13,17 +13,7 @@ logpath = os.getcwd()+'\\logs'
 configpath = os.getcwd()+'\\config'
 
 
-class DrawImageThread(QThread):
-    def __init__(self, audioTool):
-        super(DrawImageThread, self).__init__()
-        self.audioTool = audioTool
 
-    def run(self):
-        while self.audioTool.threadRun:
-            if self.audioTool.isStarted:
-                self.audioTool.dataShow.showImage()
-                # self.queue.put(self.dataShow.testReadFile())
-            time.sleep(0.01)
 
 class AudioToolUI(Ui_MainWindow):
     def __init__(self, MainWindow):
@@ -40,16 +30,15 @@ class AudioToolUI(Ui_MainWindow):
         self.dataShow = DataShow(self)
 
 
-        #self.dataShowThread = threading.Thread(target=self.serialReadData)
-        #self.queue = multiprocessing.Queue()
-        self.threadRun = True
-        #self.dataShowProcess = multiprocessing.Process(target=drawImage, args=(self.queue, self.threadRun))
+        self.dataShowThread = threading.Thread(target=self.serialReadData)
+        self.queue = multiprocessing.Queue()
+        self.hasData = multiprocessing.Value('i', 0)
+        self.threadRun = multiprocessing.Value('i', 1)
+        self.dataShowProcess = multiprocessing.Process(target=drawImage, args=(self.queue, self.threadRun, self.hasData))
 
-        #self.dataShowThread.start()
-        #self.dataShowProcess.start()
+        self.dataShowThread.start()
+        self.dataShowProcess.start()
 
-        self.qtthread = DrawImageThread(self)
-        self.qtthread.start()
         if os.path.exists(logpath):
             pass
         else:
@@ -57,7 +46,7 @@ class AudioToolUI(Ui_MainWindow):
 
     def __del__(self):
         print("done")
-
+        #self.relase()
     # set slot
     def setSignalSlot(self):
         self.SerialRefreshBtn.clicked.connect(self.on_SerialRefreshBtn_clicked)
@@ -196,19 +185,21 @@ class AudioToolUI(Ui_MainWindow):
 
     # a new thread to recv data and show
     def serialReadData(self):
-        while self.threadRun:
+        while self.threadRun.value == 1:
             if self.isStarted:
-                self.dataShow.showImage()
-                #self.queue.put(self.dataShow.testReadFile())
-            time.sleep(0.01)
+                #self.dataShow.showImage()
+                if self.hasData.value == 0:
+                    self.queue.put(self.dataShow.testReadFile())
+                    self.hasData.value = 1
+            time.sleep(0.001)
 
     def dataProcess(self):
         pass
 
     def relase(self):
-        self.threadRun = False
-        #self.dataShowThread.join()
-        #self.dataShowProcess.join(1)
+        self.threadRun.value = 0
+        self.dataShowThread.join()
+        self.dataShowProcess.join()
         if self.ser is not None:
             if self.isStarted:
                 self.serialWriteMsg("StopTestCase")

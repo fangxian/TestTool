@@ -10,7 +10,7 @@ def man(queue, shv, t):
         if shv.value == 1:
             data = np.zeros(10000)
             queue.put(data)
-            img = np.random.randint(1,100,size=100)
+            img = np.random.randint(1, 100, size=100)
             plt.plot(img)
             plt.show()
             plt.pause(0.005)
