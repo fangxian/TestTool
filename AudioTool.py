@@ -7,7 +7,7 @@ import json
 import threading
 import multiprocessing
 from PyQt5.QtCore import QThread, pyqtSignal
-from AudioDataProcess import DataShow, drawImage
+from AudioDataProcess import DataShow, drawImage, drawImage_1
 import cv2 as cv
 logpath = os.getcwd()+'\\logs'
 configpath = os.getcwd()+'\\config'
@@ -23,7 +23,7 @@ class AudioToolUI(Ui_MainWindow):
         self.parameterStr = None
         self.testCaseName = None
         self.isRenamed = False
-        self.isStarted = False
+        #self.isStarted = False
         self.configMap = {}
         self.serialWriteSuccess = False
         self.parameterMap = {}
@@ -32,9 +32,9 @@ class AudioToolUI(Ui_MainWindow):
 
         self.dataShowThread = threading.Thread(target=self.serialReadData)
         self.queue = multiprocessing.Queue()
-        self.hasData = multiprocessing.Value('i', 0)
+        self.isStarted = multiprocessing.Value('i', 0)
         self.threadRun = multiprocessing.Value('i', 1)
-        self.dataShowProcess = multiprocessing.Process(target=drawImage, args=(self.queue, self.threadRun, self.hasData))
+        self.dataShowProcess = multiprocessing.Process(target=drawImage, args=(self.queue, self.threadRun, self.isStarted))
 
         self.dataShowThread.start()
         self.dataShowProcess.start()
@@ -90,14 +90,16 @@ class AudioToolUI(Ui_MainWindow):
             self.serialWriteMsg(self.parameterStr)
             #cv.namedWindow("ADC data", cv.WINDOW_NORMAL)
             if self.serialWriteSuccess is True:
-                self.isStarted = True
+                self.isStarted.value = 1
                 self.StartTestCaseBtn.setText("Stop")
         else:
             self.serialWriteMsg("StopTestCase")
             if self.serialWriteSuccess is False:
                 return
 
-            self.isStarted = False
+            self.isStarted.value = 0
+            #self.queue.close()
+            #self.queue = multiprocessing.Queue()
             self.StartTestCaseBtn.setText("Start")
             self.log("stop test case: " + self.testCaseName)
             self.fp.close()
@@ -160,6 +162,7 @@ class AudioToolUI(Ui_MainWindow):
 
     # print log on text view and dump to file
     def log(self, str):
+
         if self.fp is None:
             self.logfile = time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime(time.time())) + '-' + 'Log'
             self.logfile = logpath + "\\" + self.logfile
@@ -186,12 +189,12 @@ class AudioToolUI(Ui_MainWindow):
     # a new thread to recv data and show
     def serialReadData(self):
         while self.threadRun.value == 1:
-            if self.isStarted:
+            if self.isStarted.value == 1:
                 #self.dataShow.showImage()
-                if self.hasData.value == 0:
-                    self.queue.put(self.dataShow.testReadFile())
-                    self.hasData.value = 1
-            time.sleep(0.001)
+                #if self.hasData.value == 0:
+                self.queue.put(self.dataShow.testReadFile())
+                #    self.hasData.value = 1
+                time.sleep(0.01)
 
     def dataProcess(self):
         pass
@@ -201,7 +204,7 @@ class AudioToolUI(Ui_MainWindow):
         self.dataShowThread.join()
         self.dataShowProcess.join()
         if self.ser is not None:
-            if self.isStarted:
+            if self.isStarted.value:
                 self.serialWriteMsg("StopTestCase")
             self.ser.close()
         if self.fp is not None:
