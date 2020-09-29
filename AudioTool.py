@@ -7,7 +7,7 @@ import json
 import threading
 import multiprocessing
 from PyQt5.QtCore import QThread, pyqtSignal
-from AudioDataProcess import DataShow, drawImage, drawImage_1
+from AudioDataProcess import DataShow, drawImage, drawImage_1, drwaSpectrum
 from queue import Queue
 import numpy as np
 import wave
@@ -37,15 +37,18 @@ class AudioToolUI(Ui_MainWindow):
         self.dataStoreThread = threading.Thread(target=self.dataSave)
 
         self.queue = multiprocessing.Queue()
+        self.specQueue = multiprocessing.Queue()
         self.hasData = multiprocessing.Value('i', 0)
         self.threadRun = multiprocessing.Value('i', 1)
-
+        self.resetFlag = multiprocessing.Value('i', 0)
         self.dataShowProcess = multiprocessing.Process(target=drawImage,
                                                        args=(self.queue, self.threadRun, self.hasData))
 
+        self.spectrumShowProcess = multiprocessing.Process(target=drwaSpectrum, args=(self.specQueue, self.threadRun, self.resetFlag))
         self.dataReadThread.start()
         self.dataShowProcess.start()
         self.dataStoreThread.start()
+        self.spectrumShowProcess.start()
         if os.path.exists(logpath):
             pass
         else:
@@ -123,6 +126,7 @@ class AudioToolUI(Ui_MainWindow):
                 binfile = '\\data-' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime(time.time())) + '.bin'
                 #self.dataFp = open(binFilePath + binfile, 'w+')
                 self.isStarted = True
+                self.resetFlag.value = 1
                 self.StartTestCaseBtn.setText("Stop")
         else:
             self.serialWriteMsg("StopTestCase")
@@ -139,6 +143,13 @@ class AudioToolUI(Ui_MainWindow):
 
             # self.queue.close()
             # self.queue = multiprocessing.Queue()
+
+            while not self.specQueue.empty() or not self.queue.empty():
+                if not self.specQueue.empty():
+                    self.specQueue.get()
+                if not self.queue.empty():
+                    self.queue.get()
+
             self.StartTestCaseBtn.setText("Start")
             self.log("stop test case: " + self.testCaseName)
             self.logFp.close()
@@ -236,6 +247,7 @@ class AudioToolUI(Ui_MainWindow):
                     if data is not None:
                         #self.dataFp.write(str(data))
                         self.queue.put(data)
+                        self.specQueue.put(data)
                         self.hasData.value = 1
                     time.sleep(0.01)
 
@@ -270,6 +282,7 @@ class AudioToolUI(Ui_MainWindow):
         self.dataReadThread.join()
         self.dataStoreThread.join()
         self.dataShowProcess.join()
+        self.spectrumShowProcess.join()
         if self.dataFp is not None:
             self.dataFp.close()
         if self.ser is not None:

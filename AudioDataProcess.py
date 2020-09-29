@@ -113,19 +113,11 @@ def drawImage(q, runThread, hasData):
     fig.show()
     fig.canvas.draw()
     backgrounds = []
-    backgrounds.append(fig.canvas.copy_from_bbox(axes[0, 0].bbox))
-    backgrounds.append(fig.canvas.copy_from_bbox(axes[0, 1].bbox))
-    backgrounds.append(fig.canvas.copy_from_bbox(axes[0, 2].bbox))
-    backgrounds.append(fig.canvas.copy_from_bbox(axes[0, 3].bbox))
-    backgrounds.append(fig.canvas.copy_from_bbox(axes[1, 0].bbox))
-    backgrounds.append(fig.canvas.copy_from_bbox(axes[1, 1].bbox))
-    backgrounds.append(fig.canvas.copy_from_bbox(axes[1, 2].bbox))
-    backgrounds.append(fig.canvas.copy_from_bbox(axes[1, 3].bbox))
-
+    for i in range(2):
+        for j in range(4):
+            backgrounds.append(fig.canvas.copy_from_bbox(axes[i, j].bbox))
     threadPool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="test_")
-    canvas = np.ones((800, 1536), dtype="uint8")
-    canvas1 = np.ones((600, 600, 3))
-    canvas1raw = np.ones((600, 600))
+
     count = 0
     start = time.time()
     while runThread.value == 1:
@@ -138,22 +130,12 @@ def drawImage(q, runThread, hasData):
             raw1[raw1 > 32767] -= 65536
             raw1 += 32768
             raw2 = raw1.reshape((512, 8))
-            DrawMax[0] = np.max(raw2[:, 0])
-            DrawMax[1] = np.max(raw2[:, 1])
-            DrawMax[2] = np.max(raw2[:, 2])
-            DrawMax[3] = np.max(raw2[:, 3])
-            DrawMin[0] = np.min(raw2[:, 0])
-            DrawMin[1] = np.min(raw2[:, 1])
-            DrawMin[2] = np.min(raw2[:, 2])
-            DrawMin[3] = np.min(raw2[:, 3])
-            raw2[:, 0] = raw2[:, 0] - DrawMin[0]
-            raw2[:, 1] = raw2[:, 1] - DrawMin[1]
-            raw2[:, 2] = raw2[:, 2] - DrawMin[2]
-            raw2[:, 3] = raw2[:, 3] - DrawMin[3]
-            ZoomFactor[0] = 300 / (DrawMax[0] - DrawMin[0])
-            ZoomFactor[1] = 300 / (DrawMax[1] - DrawMin[1])
-            ZoomFactor[2] = 300 / (DrawMax[2] - DrawMin[2])
-            ZoomFactor[3] = 300 / (DrawMax[3] - DrawMin[3])
+            for i in range(4):
+                DrawMax[i] = np.max(raw2[:, i])
+                DrawMin[i] = np.min(raw2[:, i])
+                raw2[:, i] = raw2[:, i] - DrawMin[i]
+                ZoomFactor[i] = 300 / (DrawMax[i] - DrawMin[i])
+
             fft0 = 20 * np.log(np.abs(np.fft.fft(raw2[:, 0])[0:256]) + 1)
             fft1 = 20 * np.log(np.abs(np.fft.fft(raw2[:, 1])[0:256]) + 1)
             fft2 = 20 * np.log(np.abs(np.fft.fft(raw2[:, 2])[0:256]) + 1)
@@ -173,23 +155,7 @@ def drawImage(q, runThread, hasData):
             fft1_x, fft1_y = threadPool.submit(fftRun, 300, fftZoomFactor, fft1).result()
             fft2_x, fft2_y = threadPool.submit(fftRun, 700, fftZoomFactor, fft2).result()
             fft3_x, fft3_y = threadPool.submit(fftRun, 700, fftZoomFactor, fft3).result()
-            '''
-            fft_raw = PlotDataAdc[0:8192]
-            fft_raw = fft_raw.reshape((4096, 2))
-            fft_raw = fft_raw[:, 0] * 256 + fft_raw[:, 1]
-            fft_raw = fft_raw.reshape(512, 8)
-            fft_result[0, 255, :] = 20 * np.log(np.abs((np.fft.fft(fft_raw[:, 0])[0:256])))
-            fft_result[1, 255, :] = 20 * np.log(np.abs((np.fft.fft(fft_raw[:, 1])[0:256])))
-            fft_result[2, 255, :] = 20 * np.log(np.abs((np.fft.fft(fft_raw[:, 2])[0:256])))
-            fft_result[3, 255, :] = 20 * np.log(np.abs((np.fft.fft(fft_raw[:, 3])[0:256])))
-            canvas1raw[0:256, 0:256] = (fft_result[0, :, :] - np.min(fft_result[0, :, :])).T
-            canvas1raw[300:556, 0:256] = (fft_result[1, :, :] - np.min(fft_result[1, :, :])).T
-            canvas1raw[0:256, 300:556] = (fft_result[2, :, :] - np.min(fft_result[2, :, :])).T
-            canvas1raw[300:556, 300:556] = (fft_result[3, :, :] - np.min(fft_result[3, :, :])).T
-            canvas1[:, :, 0] = canvas1raw * 0.114
-            canvas1[:, :, 1] = canvas1raw * 0.587
-            canvas1[:, :, 2] = canvas1raw * 0.299
-            '''
+
             fig.canvas.restore_region(backgrounds[0])
             line1.set_data(adc0_x, adc0_y)
             axes[0, 0].draw_artist(line1)
@@ -229,23 +195,69 @@ def drawImage(q, runThread, hasData):
             line8.set_data(fft3_x, fft3_y)
             axes[1, 3].draw_artist(line8)
             fig.canvas.blit(axes[1, 3].bbox)
-
-            # fig.canvas.restore_region(backgrounds[0])
-            # line2.set_data(adc1_x, adc1_y)
-            # line3.set_data(adc2_x, adc2_y)
-            # line4.set_data(adc3_x, adc3_y)
-            # line5.set_data(fft0_x, fft0_y)
-            # line6.set_data(fft1_x, fft1_y)
-            # line7.set_data(fft2_x, fft2_y)
-            # line8.set_data(fft3_x, fft3_y)
             plt.pause(0.0000001)
-            # plt.show()
         time.sleep(0.01)
     end = time.time()
     print(end - start)
     print(count)
     plt.close(fig)
     threadPool.shutdown(wait=False)
+
+def drwaSpectrum(q, runThread, resetFlag):
+    canvas1raw = np.ones((600, 600))
+    plt.ion()
+    #fft_result = np.ones((4, 256, 256))
+    fig, (ax0, ax1, ax2, ax3) = plt.subplots(1, 4)
+    fig.show()
+    #count = 0
+    while runThread.value == 1:
+        if resetFlag.value == 1:
+            fft_result = np.ones((4, 256, 256))
+            count = 0
+            resetFlag.value = 0
+        if not q.empty() == 1:
+        #if hasData.value == 1:
+            PlotDataAdc = q.get()
+            count += 1
+            fft_result[:, 0:255, :] = fft_result[:, 1:256, :]
+            fft_raw = PlotDataAdc[100:8292]
+            # print("---------%d %d %d"%(b,a,temp_a))
+            fft_raw = fft_raw.reshape((4096, 2))
+            fft_raw = fft_raw[:, 0] * 256 + fft_raw[:, 1]
+            fft_raw = fft_raw.reshape(512, 8)
+            fft_result[0, 255, :] = 20 * np.log(np.abs((np.fft.fft(fft_raw[:, 0])[0:256])))
+            fft_result[1, 255, :] = 20 * np.log(np.abs((np.fft.fft(fft_raw[:, 1])[0:256])))
+            fft_result[2, 255, :] = 20 * np.log(np.abs((np.fft.fft(fft_raw[:, 2])[0:256])))
+            fft_result[3, 255, :] = 20 * np.log(np.abs((np.fft.fft(fft_raw[:, 3])[0:256])))
+
+            canvas1raw[0:256, 0:256] = (fft_result[0, :, :] - np.min(fft_result[0, :, :])).T
+            canvas1raw[300:556, 0:256] = (fft_result[1, :, :] - np.min(fft_result[1, :, :])).T
+            canvas1raw[0:256, 300:556] = (fft_result[2, :, :] - np.min(fft_result[2, :, :])).T
+            canvas1raw[300:556, 300:556] = (fft_result[3, :, :] - np.min(fft_result[3, :, :])).T
+
+            if count == 255:
+                ax0.axis("off")
+                ax1.axis("off")
+                ax2.axis("off")
+                ax3.axis("off")
+                ax0.set_title("CH1")
+                ax1.set_title("CH2")
+                ax2.set_title("CH3")
+                ax3.set_title("CH4")
+                ax0.pcolormesh(canvas1raw[0:256, 0:256], cmap=plt.cm.jet)
+                ax1.pcolormesh(canvas1raw[300:556, 0:256], cmap=plt.cm.jet)
+                ax2.pcolormesh(canvas1raw[0:256, 300:556], cmap=plt.cm.jet)
+                ax3.pcolormesh(canvas1raw[300:556, 300:556], cmap=plt.cm.jet)
+                # plt.pcolor(canvas1raw, cmap=plt.cm.jet)
+                # plt.show()
+                plt.pause(0.01)
+                count = 0
+                # fig.clf()
+                ax0.cla()
+                ax1.cla()
+                ax2.cla()
+                ax3.cla()
+    plt.close(fig)
 
 
 def drawImage_1(q, runThread, runValue):
