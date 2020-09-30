@@ -41,7 +41,7 @@ class AudioToolUI(Ui_MainWindow):
         self.hasData = multiprocessing.Value('i', 0)
         self.threadRun = multiprocessing.Value('i', 1)
         self.resetFlag = multiprocessing.Value('i', 0)
-        self.dataShowProcess = multiprocessing.Process(target=drawImage,
+        self.dataShowProcess = multiprocessing.Process(target=drawImage_1,
                                                        args=(self.queue, self.threadRun, self.hasData))
 
         self.spectrumShowProcess = multiprocessing.Process(target=drwaSpectrum, args=(self.specQueue, self.threadRun, self.resetFlag))
