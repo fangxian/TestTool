@@ -6,8 +6,8 @@ import time
 import json
 import threading
 import multiprocessing
-from PyQt5.QtCore import QThread, pyqtSignal
-from AudioDataProcess import DataShow, drawImage, drawImage_1, drwaSpectrum
+from PyQt5.QtWidgets import QFileDialog
+from AudioDataProcess import DataShow, drawImage, drawImage_1, drwaSpectrum, compareWaveFileSpec
 from queue import Queue
 import numpy as np
 import wave
@@ -33,8 +33,9 @@ class AudioToolUI(Ui_MainWindow):
         self.receivePingPong = np.zeros((2, 92160144), dtype=np.uint8)
         self.recviveFlag = 0
         self.storeFlag = 0
-        self.dataReadThread = threading.Thread(target=self.serialReadData)
+        #self.dataReadThread = threading.Thread(target=self.serialReadData)
         self.dataStoreThread = threading.Thread(target=self.dataSave)
+        self.serialReadThread = threading.Thread(target=self.serialRead)
 
         self.queue = multiprocessing.Queue()
         self.specQueue = multiprocessing.Queue()
@@ -45,10 +46,14 @@ class AudioToolUI(Ui_MainWindow):
                                                        args=(self.queue, self.threadRun, self.hasData))
 
         self.spectrumShowProcess = multiprocessing.Process(target=drwaSpectrum, args=(self.specQueue, self.threadRun, self.resetFlag))
-        self.dataReadThread.start()
+
+        self.pool = multiprocessing.Pool(processes=3)
+
+        #self.dataReadThread.start()
         self.dataShowProcess.start()
         self.dataStoreThread.start()
         self.spectrumShowProcess.start()
+        self.serialReadThread.start()
         if os.path.exists(logpath):
             pass
         else:
@@ -73,6 +78,39 @@ class AudioToolUI(Ui_MainWindow):
         self.ClearLogBtn.clicked.connect(self.on_ClearLogBtn_clicked)
         self.TestCaseRefreshBtn.clicked.connect(self.on_TestCaseRefreshBtn_clicked)
         self.DownloadBtn.clicked.connect(self.on_DownloadBtn_clicked)
+        self.OpenFileBtn1.clicked.connect(self.on_OpenFileBtn1_clicked)
+        self.OpenFileBtn2.clicked.connect(self.on_OpenFileBtn2_clicked)
+        self.OpenFileBtn3.clicked.connect(self.on_OpenFileBtn3_clicked)
+        self.CompareBtn.clicked.connect(self.on_CompareBtn_clicked)
+
+    def on_OpenFileBtn1_clicked(self):
+        openfile_name = QFileDialog.getOpenFileName(self.WavCompareWidget, '选择文件', '', 'Wav(*.wav)')
+        fileName = openfile_name[0]
+        self.FileLineEdit1.setText(fileName)
+
+    def on_OpenFileBtn2_clicked(self):
+        openfile_name = QFileDialog.getOpenFileName(self.WavCompareWidget, '选择文件', '', 'Wav(*.wav)')
+        fileName = openfile_name[0]
+        self.FileLineEdit2.setText(fileName)
+    def on_OpenFileBtn3_clicked(self):
+        openfile_name = QFileDialog.getOpenFileName(self.WavCompareWidget, '选择文件', '', 'Wav(*.wav)')
+        fileName = openfile_name[0]
+        self.FileLineEdit3.setText(fileName)
+
+    def on_CompareBtn_clicked(self):
+        files = []
+        filename1 = self.FileLineEdit1.text()
+        filename2 = self.FileLineEdit2.text()
+        filename3 = self.FileLineEdit3.text()
+        if filename1 != '':
+            files.append(filename1)
+        if filename2 != '':
+            files.append(filename2)
+        if filename3 != '':
+            files.append(filename3)
+        self.pool.apply(compareWaveFileSpec, (files,))
+        print(filename1)
+
     # walk json config files
     def loadTestCase(self):
         configFiles = os.listdir(configpath)
@@ -102,6 +140,7 @@ class AudioToolUI(Ui_MainWindow):
         self.log(str(str_data))
         #TODO use a new thread to send wave data
         #self.serialWriteMsg(str_data, isByte=True)
+        self.log("download wave data finished!")
         f.close()
 
     def on_TestCaseRefreshBtn_clicked(self):
@@ -129,9 +168,12 @@ class AudioToolUI(Ui_MainWindow):
                 self.resetFlag.value = 1
                 self.StartTestCaseBtn.setText("Stop")
         else:
-            self.serialWriteMsg("StopTestCase")
+            stopJson = {"cmd":"StopCase"}
+            stopStr = json.dumps(stopJson)
+            self.serialWriteMsg(stopStr)
             if self.serialWriteSuccess is False:
                 return
+            time.sleep(0.1)
             self.isStarted = False
 
             if self.recviveFlag == 0:
@@ -180,7 +222,7 @@ class AudioToolUI(Ui_MainWindow):
             try:
                 self.portx = self.SerialPortQCB.currentText()
                 self.bits = int(self.SerialBitRateQCB.currentText())
-                self.ser = serial.Serial(self.portx, self.bits, timeout=None)
+                self.ser = serial.Serial(self.portx, self.bits, timeout=0.01)
                 self.log("Open Serial port: " + self.portx + " bitrates: " + str(self.bits))
                 self.SerialOpenBtn.setText("Close")
             except Exception as e:
@@ -237,6 +279,25 @@ class AudioToolUI(Ui_MainWindow):
             self.log("ser has not been open, cannot write msg: " + str)
             self.serialWriteSuccess = False
 
+    def serialRead(self):
+        while self.threadRun.value == 1:
+            if self.isStarted:
+                str1 = self.ser.read(1600)
+                bytesHead = str1[:8]
+                if str(bytesHead, encoding="utf-8") == '':
+                    pass
+                else:
+                    strstr = str(bytesHead, encoding="utf-8")
+                    if strstr[0:4] == "data":
+                        len = int(strstr[4:8])
+                        data = self.dataShow.storeCollectData(str1[8:8+len], len)
+                        if data is not None:
+                            self.queue.put(data)
+                            self.specQueue.put(data)
+                            self.hasData.value = 1
+                    #self.log(str(str1, encoding="utf-8"))
+                #time.sleep(0.001)
+
     # a new thread to recv data and show
     def serialReadData(self):
         while self.threadRun.value == 1:
@@ -279,15 +340,20 @@ class AudioToolUI(Ui_MainWindow):
 
     def relase(self):
         self.threadRun.value = 0
-        self.dataReadThread.join()
+        #self.dataReadThread.join()
+        self.serialReadThread.join()
         self.dataStoreThread.join()
         self.dataShowProcess.join()
         self.spectrumShowProcess.join()
+        self.pool.close()
+        self.pool.join()
         if self.dataFp is not None:
             self.dataFp.close()
         if self.ser is not None:
             if self.isStarted:
-                self.serialWriteMsg("StopTestCase")
+                stopJson = {"cmd": "Stop"}
+                stopStr = json.dumps(stopJson)
+                self.serialWriteMsg(stopStr)
             self.ser.close()
             self.ser = None
         if self.logFp is not None:

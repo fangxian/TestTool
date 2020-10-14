@@ -5,6 +5,7 @@ import cv2 as cv
 import os, time
 import copy
 from concurrent.futures import ThreadPoolExecutor
+import wave
 import matplotlib.animation as animation
 import pyqtgraph as pg
 
@@ -277,6 +278,30 @@ def drawImage_1(q, runThread, hasData):
     plt.close(fig)
 
 
+def compareWaveFileSpec(files):
+        #nchannels = []
+        #sampwidth = []
+        #framerate = []
+        #nframes = []
+        #times = []
+        #wave_datas = []
+        for i in range(len(files)):
+            fp = wave.open(files[i], "rb")
+            params1 = fp.getparams()
+            nchannels, sampwidth, framerate, nframes = params1[:4]
+
+            str_data = fp.readframes(nframes)
+            fp.close()
+            wave_data = np.fromstring(str_data, dtype=np.short)
+            wave_data = wave_data.T/1000
+            #wave_datas.append(wave_data)
+            time = np.arange(0, nframes) * (1.0 / framerate)
+            #times.append(time)
+            plt.subplot(3, 1, 1+i)
+            plt.plot(wave_data)
+
+        plt.show()
+
 def saveData(dataQueue, threadRun):
     pass
 
@@ -288,12 +313,36 @@ class DataShow:
         self.ReceivePingPong = np.zeros((2, 92160144), dtype=np.uint8)
         self.count = 0
         self.index = 0
-
+        self.dataIndex = 0
     def __del__(self):
         self.fp.close()
 
     def serialRead(self):
         pass
+
+    def storeCollectData(self, data, len):
+        self.PlotDataAdc[self.dataIndex*len:(self.dataIndex+1)*len] = copy.deepcopy(np.frombuffer(data, dtype=np.uint8))
+        self.audioTool.receivePingPong[self.audioTool.recviveFlag][self.index*len:len*(self.index+1)] = copy.deepcopy(np.frombuffer(data, dtype=np.uint8))
+        self.dataIndex += 1
+        self.index += 1
+        if self.index == 10000:
+            if self.audioTool.recviveFlag == 0:
+                self.audioTool.recviveFlag = 1
+                self.audioTool.storeFlag == 0
+            elif self.audioTool.recviveFlag == 1:
+                self.audioTool.recviveFlag = 0
+                self.audioTool.storeFlag == 1
+            self.index = 0
+
+        if self.dataIndex == 6:
+            self.dataIndex = 0
+            if self.count != 5:
+                self.count = self.count + 1
+                return None
+            self.count = 0
+            return self.PlotDataAdc
+
+        return None
 
     def testReadFile(self):
         # return self.fp.read()
@@ -331,9 +380,9 @@ class DataShow:
         if self.index == 10000:
             if self.audioTool.recviveFlag == 0:
                 self.audioTool.recviveFlag = 1
-                self.audioTool.storeFlag == 1
+                self.audioTool.storeFlag == 0
             elif self.audioTool.recviveFlag == 1:
-                self.audioTool.recviveFlag = 1
+                self.audioTool.recviveFlag = 0
                 self.audioTool.storeFlag == 1
 
         if self.count != 3:
@@ -346,7 +395,7 @@ class DataShow:
     def reset(self):
         self.count = 0
         self.index = 0
-
+        self.dataIndex = 0
     def dataProcess(self, data):
         pass
 

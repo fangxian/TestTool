@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1136</width>
-    <height>804</height>
+    <width>1058</width>
+    <height>790</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,10 +17,10 @@
    <widget class="QWidget" name="SerialWidget" native="true">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>40</x>
       <y>20</y>
-      <width>251</width>
-      <height>231</height>
+      <width>271</width>
+      <height>251</height>
      </rect>
     </property>
     <widget class="QComboBox" name="SerialPortQCB">
@@ -98,10 +98,10 @@
     <widget class="QPushButton" name="SerialSendMsgBtn">
      <property name="geometry">
       <rect>
-       <x>170</x>
-       <y>200</y>
+       <x>160</x>
+       <y>210</y>
        <width>81</width>
-       <height>21</height>
+       <height>31</height>
       </rect>
      </property>
      <property name="text">
@@ -112,8 +112,8 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>160</y>
-       <width>241</width>
+       <y>170</y>
+       <width>231</width>
        <height>31</height>
       </rect>
      </property>
@@ -143,9 +143,9 @@
    <widget class="QTextBrowser" name="OpLogBrowser">
     <property name="geometry">
      <rect>
-      <x>620</x>
+      <x>660</x>
       <y>40</y>
-      <width>461</width>
+      <width>351</width>
       <height>621</height>
      </rect>
     </property>
@@ -153,9 +153,9 @@
    <widget class="QLabel" name="OpLogLabel">
     <property name="geometry">
      <rect>
-      <x>620</x>
-      <y>10</y>
-      <width>131</width>
+      <x>660</x>
+      <y>0</y>
+      <width>71</width>
       <height>31</height>
      </rect>
     </property>
@@ -174,7 +174,7 @@
    <widget class="QPushButton" name="ClearLogBtn">
     <property name="geometry">
      <rect>
-      <x>630</x>
+      <x>660</x>
       <y>670</y>
       <width>75</width>
       <height>41</height>
@@ -187,7 +187,7 @@
    <widget class="QLabel" name="TestCaseLabel">
     <property name="geometry">
      <rect>
-      <x>290</x>
+      <x>330</x>
       <y>20</y>
       <width>161</width>
       <height>21</height>
@@ -208,10 +208,10 @@
    <widget class="QPushButton" name="StartTestCaseBtn">
     <property name="geometry">
      <rect>
-      <x>290</x>
-      <y>670</y>
+      <x>330</x>
+      <y>240</y>
       <width>91</width>
-      <height>41</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
@@ -221,10 +221,10 @@
    <widget class="QPushButton" name="TestCaseRefreshBtn">
     <property name="geometry">
      <rect>
-      <x>430</x>
-      <y>670</y>
+      <x>520</x>
+      <y>240</y>
       <width>91</width>
-      <height>41</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
@@ -234,56 +234,179 @@
    <widget class="QListWidget" name="TestCaseListWidget">
     <property name="geometry">
      <rect>
-      <x>290</x>
+      <x>330</x>
       <y>40</y>
-      <width>251</width>
-      <height>621</height>
+      <width>281</width>
+      <height>191</height>
      </rect>
     </property>
    </widget>
-   <widget class="QListWidget" name="WaveListWidget">
+   <widget class="QWidget" name="WavCompareWidget" native="true">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>330</y>
-      <width>251</width>
-      <height>331</height>
+      <x>330</x>
+      <y>290</y>
+      <width>281</width>
+      <height>431</height>
      </rect>
     </property>
+    <widget class="QLineEdit" name="FileLineEdit1">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>251</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="WavComLabel">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>141</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Times New Roman</family>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>WavDataCompare</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="FileLineEdit2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>140</y>
+       <width>251</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="FileLineEdit3">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>230</y>
+       <width>251</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="CompareBtn">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>330</y>
+       <width>121</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Compare</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="OpenFileBtn1">
+     <property name="geometry">
+      <rect>
+       <x>14</x>
+       <y>90</y>
+       <width>241</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>OpenFile</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="OpenFileBtn2">
+     <property name="geometry">
+      <rect>
+       <x>14</x>
+       <y>180</y>
+       <width>241</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>OpenFile</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="OpenFileBtn3">
+     <property name="geometry">
+      <rect>
+       <x>14</x>
+       <y>270</y>
+       <width>241</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>OpenFile</string>
+     </property>
+    </widget>
    </widget>
-   <widget class="QLabel" name="DownloadCaseLabel">
+   <widget class="QWidget" name="DownloadWavWiget" native="true">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>305</y>
-      <width>131</width>
-      <height>21</height>
+      <x>40</x>
+      <y>290</y>
+      <width>271</width>
+      <height>431</height>
      </rect>
     </property>
-    <property name="font">
-     <font>
-      <family>Times New Roman</family>
-      <pointsize>11</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
-     </font>
-    </property>
-    <property name="text">
-     <string>DownloadCase</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="DownloadBtn">
-    <property name="geometry">
-     <rect>
-      <x>80</x>
-      <y>670</y>
-      <width>75</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Download</string>
-    </property>
+    <widget class="QListWidget" name="WaveListWidget">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>251</width>
+       <height>351</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="DownloadBtn">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>380</y>
+       <width>75</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Download</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="DownloadCaseLabel">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>131</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Times New Roman</family>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>DownloadWav</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -291,7 +414,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1136</width>
+     <width>1058</width>
      <height>23</height>
     </rect>
    </property>
