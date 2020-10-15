@@ -11,14 +11,23 @@ from AudioDataProcess import DataShow, drawImage, drawImage_1, drwaSpectrum, com
 from queue import Queue
 import numpy as np
 import wave
+
 logpath = os.getcwd() + '\\logs'
 configpath = os.getcwd() + '\\config'
 wavepath = os.getcwd() + '\\wave'
-binFilePath = os.getcwd() + '\\data'
+mmicFilePath = os.getcwd() + '\\mdata'
+bmicFilePath = os.getcwd() + '\\bdata'
+
 
 class AudioToolUI(Ui_MainWindow):
     def __init__(self, MainWindow):
         super().setupUi(MainWindow)
+        # used to store aec data for realtime processing
+        self.aecMMicQ = Queue()
+        self.aecBMicQ = Queue()
+        self.isAECCase = False
+        self.isAECRT = False
+        self.testlist = []
         self.ser = None
         self.logFp = None
         self.dataFp = None
@@ -30,11 +39,19 @@ class AudioToolUI(Ui_MainWindow):
         self.serialWriteSuccess = False
         self.parameterMap = {}
         self.dataShow = DataShow(self)
-        self.receivePingPong = np.zeros((2, 92160144), dtype=np.uint8)
-        self.recviveFlag = 0
-        self.storeFlag = 0
-        #self.dataReadThread = threading.Thread(target=self.serialReadData)
-        self.dataStoreThread = threading.Thread(target=self.dataSave)
+        # store metric mic data
+        self.receiveMMicPingPong = np.zeros((2, 92160144), dtype=np.uint8)
+        self.recviveMMicFlag = 0
+        self.storeMMicFlag = 0
+
+        # store big mic data
+        self.receiveBMicPingPong = np.zeros((2, 92160144), dtype=np.uint8)
+        self.recviveBMicFlag = 0
+        self.storeBMicFlag = 0
+
+        # self.dataReadThread = threading.Thread(target=self.serialReadData)
+        self.dataStoreMMICThread = threading.Thread(target=self.dataMMicSave)
+        self.dataStoreBMICThread = threading.Thread(target=self.dataBMicSave)
         self.serialReadThread = threading.Thread(target=self.serialRead)
 
         self.queue = multiprocessing.Queue()
@@ -44,26 +61,31 @@ class AudioToolUI(Ui_MainWindow):
         self.resetFlag = multiprocessing.Value('i', 0)
         self.dataShowProcess = multiprocessing.Process(target=drawImage_1,
                                                        args=(self.queue, self.threadRun, self.hasData))
-
-        self.spectrumShowProcess = multiprocessing.Process(target=drwaSpectrum, args=(self.specQueue, self.threadRun, self.resetFlag))
-
+        self.spectrumShowProcess = multiprocessing.Process(target=drwaSpectrum,
+                                                           args=(self.specQueue, self.threadRun, self.resetFlag))
         self.pool = multiprocessing.Pool(processes=3)
 
-        #self.dataReadThread.start()
+        # self.dataReadThread.start()
         self.dataShowProcess.start()
-        self.dataStoreThread.start()
+        self.dataStoreMMICThread.start()
+        self.dataStoreBMICThread.start()
         self.spectrumShowProcess.start()
         self.serialReadThread.start()
+
         if os.path.exists(logpath):
             pass
         else:
             os.mkdir(logpath)
 
-        if os.path.exists(binFilePath):
+        if os.path.exists(mmicFilePath):
             pass
         else:
-            os.mkdir(binFilePath)
+            os.mkdir(mmicFilePath)
 
+        if os.path.exists(bmicFilePath):
+            pass
+        else:
+            os.mkdir(bmicFilePath)
 
     def __del__(self):
         print("done")
@@ -92,6 +114,7 @@ class AudioToolUI(Ui_MainWindow):
         openfile_name = QFileDialog.getOpenFileName(self.WavCompareWidget, '选择文件', '', 'Wav(*.wav)')
         fileName = openfile_name[0]
         self.FileLineEdit2.setText(fileName)
+
     def on_OpenFileBtn3_clicked(self):
         openfile_name = QFileDialog.getOpenFileName(self.WavCompareWidget, '选择文件', '', 'Wav(*.wav)')
         fileName = openfile_name[0]
@@ -108,7 +131,7 @@ class AudioToolUI(Ui_MainWindow):
             files.append(filename2)
         if filename3 != '':
             files.append(filename3)
-        self.pool.apply(compareWaveFileSpec, (files,))
+        self.pool.apply_async(compareWaveFileSpec, (files,))
         print(filename1)
 
     # walk json config files
@@ -138,8 +161,8 @@ class AudioToolUI(Ui_MainWindow):
 
         str_data = f.readframes(nframes=nframes)
         self.log(str(str_data))
-        #TODO use a new thread to send wave data
-        #self.serialWriteMsg(str_data, isByte=True)
+        # TODO use a new thread to send wave data
+        # self.serialWriteMsg(str_data, isByte=True)
         self.log("download wave data finished!")
         f.close()
 
@@ -160,15 +183,26 @@ class AudioToolUI(Ui_MainWindow):
             self.parameterStr = self.configMap[self.testCaseName]
             self.log("parameters: " + self.parameterStr)
             self.serialWriteMsg(self.parameterStr)
+            paramJson = json.loads(self.parameterStr)
+            self.testCaseName = paramJson["case"]
+            if paramJson["case"] == "AEC":
+                self.isAECCase = True
+                if paramJson["isRT"] == "Yes":
+                    self.isAECRT = True
+                    self.testCaseName += "RT"
+                else:
+                    self.isAECRT = False
+                    self.testCaseName += "NRT"
+            self.testCaseName += "Case"
             # cv.namedWindow("ADC data", cv.WINDOW_NORMAL)
             if self.serialWriteSuccess is True:
-                binfile = '\\data-' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime(time.time())) + '.bin'
-                #self.dataFp = open(binFilePath + binfile, 'w+')
+                # binfile = '\\data-' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime(time.time())) + '.bin'
+                # self.dataFp = open(binFilePath + binfile, 'w+')
                 self.isStarted = True
                 self.resetFlag.value = 1
                 self.StartTestCaseBtn.setText("Stop")
         else:
-            stopJson = {"cmd":"StopCase"}
+            stopJson = {"cmd": "StopCase"}
             stopStr = json.dumps(stopJson)
             self.serialWriteMsg(stopStr)
             if self.serialWriteSuccess is False:
@@ -176,22 +210,38 @@ class AudioToolUI(Ui_MainWindow):
             time.sleep(0.1)
             self.isStarted = False
 
-            if self.recviveFlag == 0:
-                self.receivePingPong[0][0:].tofile(binFilePath+'\\data-' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime(time.time()))+'.bin')
+            if self.recviveMMicFlag == 0:
+                self.receiveMMicPingPong[0][0:].tofile(
+                    mmicFilePath + '\\dataMMIC-' + self.testCaseName + '-' + time.strftime('%Y-%m-%d-%H_%M_%S',
+                                                                                           time.localtime(
+                                                                                               time.time())) + '.bin')
             else:
-                self.receivePingPong[1][0:].tofile(binFilePath+'\\data-' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime(time.time()))+'.bin')
+                self.receiveMMicPingPong[1][0:].tofile(
+                    mmicFilePath + '\\dataMMIC-' + self.testCaseName + '-' + time.strftime('%Y-%m-%d-%H_%M_%S',
+                                                                                           time.localtime(
+                                                                                               time.time())) + '.bin')
+
+            if self.isAECCase is True:
+                if self.recviveMMicFlag == 0:
+                    self.receiveBMicPingPong[0][0:].tofile(
+                        bmicFilePath + '\\dataBMIC-' + self.testCaseName + '-' + time.strftime('%Y-%m-%d-%H_%M_%S',
+                                                                                               time.localtime(
+                                                                                                   time.time())) + '.bin')
+                else:
+                    self.receiveBMicPingPong[1][0:].tofile(
+                        bmicFilePath + '\\dataBMIC-' + self.testCaseName + '-' + time.strftime('%Y-%m-%d-%H_%M_%S',
+                                                                                               time.localtime(
+                                                                                                   time.time())) + '.bin')
 
             self.dataShow.reset()
-
-            # self.queue.close()
-            # self.queue = multiprocessing.Queue()
 
             while not self.specQueue.empty() or not self.queue.empty():
                 if not self.specQueue.empty():
                     self.specQueue.get()
                 if not self.queue.empty():
                     self.queue.get()
-
+            self.isAECCase = False
+            self.isAECRT = False
             self.StartTestCaseBtn.setText("Start")
             self.log("stop test case: " + self.testCaseName)
             self.logFp.close()
@@ -227,7 +277,7 @@ class AudioToolUI(Ui_MainWindow):
                 self.SerialOpenBtn.setText("Close")
             except Exception as e:
                 self.log("Exception: " + e.__str__())
-                #self.ser.close()
+                # self.ser.close()
         else:
             try:
                 self.ser.close()
@@ -282,21 +332,28 @@ class AudioToolUI(Ui_MainWindow):
     def serialRead(self):
         while self.threadRun.value == 1:
             if self.isStarted:
-                str1 = self.ser.read(1600)
-                bytesHead = str1[:8]
-                if str(bytesHead, encoding="utf-8") == '':
-                    pass
-                else:
-                    strstr = str(bytesHead, encoding="utf-8")
-                    if strstr[0:4] == "data":
+                if self.hasData.value == 0:
+                    str1 = self.ser.read(1600)
+                    bytesHead = str1[:8]
+                    try:
+                        strstr = str(bytesHead, encoding="utf-8")
+                    except Exception as e:
+                        print(e.__str__())
+                        continue
+                    # self.testlist.append(strstr[9])
+                    if strstr[0:4] == "mdat":
                         len = int(strstr[4:8])
-                        data = self.dataShow.storeCollectData(str1[8:8+len], len)
+                        data = self.dataShow.storeCollectData(str1[8:8 + len], len)
                         if data is not None:
                             self.queue.put(data)
                             self.specQueue.put(data)
                             self.hasData.value = 1
-                    #self.log(str(str1, encoding="utf-8"))
-                #time.sleep(0.001)
+                    elif strstr[0:4] == "bdat":
+                        len = int(strstr[4:8])
+                        self.dataShow.storeAecBMicData(str1[8:8 + len], len)
+
+                    # self.log(str(str1, encoding="utf-8"))
+                # time.sleep(0.001)
 
     # a new thread to recv data and show
     def serialReadData(self):
@@ -306,7 +363,7 @@ class AudioToolUI(Ui_MainWindow):
                 if self.hasData.value == 0:
                     data = self.dataShow.testReadFile()
                     if data is not None:
-                        #self.dataFp.write(str(data))
+                        # self.dataFp.write(str(data))
                         self.queue.put(data)
                         self.specQueue.put(data)
                         self.hasData.value = 1
@@ -323,26 +380,52 @@ class AudioToolUI(Ui_MainWindow):
     def dataProcess(self):
         pass
 
-    def dataSave(self):
+    def dataBMicSave(self):
         while self.threadRun.value == 1:
-            if self.storeFlag == 1:
-                if self.recviveFlag == 0:
-                    self.receivePingPong[1][0:].tofile(binFilePath+'\\data-' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime(time.time()))+'.bin')
-                    self.storeFlag = 0
-                    self.receivePingPong[1].fill(0)
+            if self.storeBMicFlag == 1:
+                if self.recviveBMicFlag == 0:
+                    self.receiveBMicPingPong[1][0:].tofile(
+                        bmicFilePath + '\\dataBMIC-' + self.testCaseName + '-' + time.strftime('%Y-%m-%d-%H_%M_%S',
+                                                                                               time.localtime(
+                                                                                                   time.time())) + '.bin')
+                    self.storeBMicFlag = 0
+                    self.receiveBMicPingPong[1].fill(0)
                 else:
-                    self.receivePingPong[0][0:].tofile(binFilePath+'\\data-' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime(time.time()))+'.bin')
-                    self.storeFlag = 0
-                    self.receivePingPong[0].fill(0)
+                    self.receiveBMicPingPong[0][0:].tofile(
+                        bmicFilePath + '\\dataBMIC-' + self.testCaseName + '-' + time.strftime('%Y-%m-%d-%H_%M_%S',
+                                                                                               time.localtime(
+                                                                                                   time.time())) + '.bin')
+                    self.storeMMicFlag = 0
+                    self.receiveBMicPingPong[0].fill(0)
 
             time.sleep(0.01)
 
+    def dataMMicSave(self):
+        while self.threadRun.value == 1:
+            if self.storeMMicFlag == 1:
+                if self.recviveMMicFlag == 0:
+                    self.receiveMMicPingPong[1][0:].tofile(
+                        mmicFilePath + '\\dataMMIC-' + self.testCaseName + '-' + time.strftime('%Y-%m-%d-%H_%M_%S',
+                                                                                               time.localtime(
+                                                                                                   time.time())) + '.bin')
+                    self.storeMMicFlag = 0
+                    self.receiveMMicPingPong[1].fill(0)
+                else:
+                    self.receiveMMicPingPong[0][0:].tofile(
+                        mmicFilePath + '\\dataMMIC-' + self.testCaseName + '-' + time.strftime('%Y-%m-%d-%H_%M_%S',
+                                                                                               time.localtime(
+                                                                                                   time.time())) + '.bin')
+                    self.storeMMicFlag = 0
+                    self.receiveMMicPingPong[0].fill(0)
+
+            time.sleep(0.01)
 
     def relase(self):
         self.threadRun.value = 0
-        #self.dataReadThread.join()
+        # self.dataReadThread.join()
         self.serialReadThread.join()
-        self.dataStoreThread.join()
+        self.dataStoreMMICThread.join()
+        self.dataStoreBMICThread.join()
         self.dataShowProcess.join()
         self.spectrumShowProcess.join()
         self.pool.close()
@@ -364,4 +447,3 @@ class AudioToolUI(Ui_MainWindow):
                 else:
                     dst = self.logfile + '.log'
                 os.rename(self.logfile, dst)
-

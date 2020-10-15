@@ -56,17 +56,17 @@ def drawImage(q, runThread, hasData):
         fft_x.append(np.zeros(256))
         fft_y.append(np.zeros(256))
 
-    #draw the canvas and lines
+    # draw the canvas and lines
     for i in range(2):
         for j in range(4):
             if i < 1:
-                lines.append(axes[i,j].plot(adc_x[j], adc_y[j])[0])
-                axes[i, j].set_title("adc"+str(j))
+                lines.append(axes[i, j].plot(adc_x[j], adc_y[j])[0])
+                axes[i, j].set_title("adc" + str(j))
                 axes[i, j].axis('off')
                 axes[i, j].set_xlim((0, 512))
                 axes[i, j].set_ylim((0, 800))
             else:
-                lines.append(axes[i,j].plot(fft_x[j], fft_y[j])[0])
+                lines.append(axes[i, j].plot(fft_x[j], fft_y[j])[0])
                 axes[i, j].set_title("fft" + str(j))
                 axes[i, j].axis('off')
                 axes[i, j].set_xlim((0, 256))
@@ -108,7 +108,7 @@ def drawImage(q, runThread, hasData):
             fftDrawMax = np.max(tempmax)
             fftZoomFactor = 300 / fftDrawMax
 
-            #get the point axis
+            # get the point axis
             adc_x[0], adc_y[0] = threadPool.submit(adcRun, 300, ZoomFactor, raw2, 0).result()
             adc_x[1], adc_y[1] = threadPool.submit(adcRun, 300, ZoomFactor, raw2, 1).result()
             adc_x[2], adc_y[2] = threadPool.submit(adcRun, 700, ZoomFactor, raw2, 2).result()
@@ -118,17 +118,17 @@ def drawImage(q, runThread, hasData):
             fft_x[2], fft_y[2] = threadPool.submit(fftRun, 700, fftZoomFactor, fft2).result()
             fft_x[3], fft_y[3] = threadPool.submit(fftRun, 700, fftZoomFactor, fft3).result()
 
-            #set new adc data
+            # set new adc data
             for i in range(4):
                 fig.canvas.restore_region(backgrounds[i])
                 lines[i].set_data(adc_x[i], adc_y[i])
                 axes[0, i].draw_artist(lines[i])
                 fig.canvas.blit(axes[0, i].bbox)
-            #set new fft data
+            # set new fft data
             for i in range(4):
-                fig.canvas.restore_region(backgrounds[i+4])
-                lines[i+4].set_data(fft_x[i], fft_y[i])
-                axes[1, i].draw_artist(lines[i+4])
+                fig.canvas.restore_region(backgrounds[i + 4])
+                lines[i + 4].set_data(fft_x[i], fft_y[i])
+                axes[1, i].draw_artist(lines[i + 4])
                 fig.canvas.blit(axes[1, i].bbox)
 
             plt.pause(0.0000001)
@@ -139,19 +139,20 @@ def drawImage(q, runThread, hasData):
     plt.close(fig)
     threadPool.shutdown(wait=False)
 
+
 def drwaSpectrum(q, runThread, resetFlag):
     canvas1raw = np.ones((600, 600))
     plt.ion()
     fig, (ax0, ax1, ax2, ax3) = plt.subplots(1, 4)
     fig.show()
-    #count = 0
+    count = 0
     while runThread.value == 1:
         if resetFlag.value == 1:
             fft_result = np.ones((4, 256, 256))
             count = 0
             resetFlag.value = 0
         if not q.empty() == 1:
-        #if hasData.value == 1:
+            # if hasData.value == 1:
             PlotDataAdc = q.get()
             count += 1
             fft_result[:, 0:255, :] = fft_result[:, 1:256, :]
@@ -223,10 +224,9 @@ def drawImage_1(q, runThread, hasData):
 
     threadPool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="test_")
     count = 0
-    start = time.time()
     while runThread.value == 1:
         if hasData.value == 1:
-        #if not q.empty():
+            # if not q.empty():
             PlotDataAdc = q.get()
             count = count + 1
             hasData.value = 0
@@ -272,38 +272,28 @@ def drawImage_1(q, runThread, hasData):
             plt.pause(0.0000001)
             # plt.show()
         time.sleep(0.01)
-    end = time.time()
-    print(end - start)
-    print(count)
     plt.close(fig)
 
 
 def compareWaveFileSpec(files):
-        #nchannels = []
-        #sampwidth = []
-        #framerate = []
-        #nframes = []
-        #times = []
-        #wave_datas = []
-        for i in range(len(files)):
-            fp = wave.open(files[i], "rb")
-            params1 = fp.getparams()
-            nchannels, sampwidth, framerate, nframes = params1[:4]
+    for i in range(len(files)):
+        fp = wave.open(files[i], "rb")
+        params1 = fp.getparams()
+        nchannels, sampwidth, framerate, nframes = params1[:4]
+        str_data = fp.readframes(nframes)
+        fp.close()
+        wave_data = np.fromstring(str_data, dtype=np.short)
+        wave_data = wave_data.T / 1000
+        plt.subplot(len(files), 1, 1 + i)
+        plt.title(files[i].split("/")[-1])
+        plt.plot(wave_data)
 
-            str_data = fp.readframes(nframes)
-            fp.close()
-            wave_data = np.fromstring(str_data, dtype=np.short)
-            wave_data = wave_data.T/1000
-            #wave_datas.append(wave_data)
-            time = np.arange(0, nframes) * (1.0 / framerate)
-            #times.append(time)
-            plt.subplot(3, 1, 1+i)
-            plt.plot(wave_data)
+    plt.show()
 
-        plt.show()
 
 def saveData(dataQueue, threadRun):
     pass
+
 
 class DataShow:
     def __init__(self, AudioTool):
@@ -312,27 +302,52 @@ class DataShow:
         self.PlotDataAdc = np.zeros(8352)
         self.ReceivePingPong = np.zeros((2, 92160144), dtype=np.uint8)
         self.count = 0
-        self.index = 0
+        self.indexMMic = 0
         self.dataIndex = 0
+
+        self.indexBMic = 0
+
     def __del__(self):
         self.fp.close()
 
     def serialRead(self):
         pass
 
+    # TODO to change len if board data length is different with mmic
+    def storeAecBMicData(self, data, len):
+        self.audioTool.receiveBMicPingPong[self.audioTool.recviveBMicFlag][
+        self.indexBMic * len:len * (self.indexBMic + 1)] = copy.deepcopy(np.frombuffer(data, dtype=np.uint8))
+        if self.audioTool.isAECCase is True and self.audioTool.isAECRT is True:
+            self.audioTool.aecBMicQ.put(self.audioTool.receiveBMicPingPong[self.audioTool.recviveBMicFlag][
+                                        self.indexBMic * len:len * (self.indexBMic + 1)])
+        self.indexBMic += 1
+        if self.indexBMic == 66207:
+            if self.audioTool.recviveBMicFlag == 0:
+                self.audioTool.recviveBMicFlag = 1
+                self.audioTool.storeBMicFlag = 0
+            elif self.audioTool.recviveBMicFlag == 1:
+                self.audioTool.recviveBMicFlag = 0
+                self.audioTool.storeBMicFlag = 1
+            self.indexBMic = 0
+
     def storeCollectData(self, data, len):
-        self.PlotDataAdc[self.dataIndex*len:(self.dataIndex+1)*len] = copy.deepcopy(np.frombuffer(data, dtype=np.uint8))
-        self.audioTool.receivePingPong[self.audioTool.recviveFlag][self.index*len:len*(self.index+1)] = copy.deepcopy(np.frombuffer(data, dtype=np.uint8))
+        self.PlotDataAdc[self.dataIndex * len:(self.dataIndex + 1) * len] = copy.deepcopy(
+            np.frombuffer(data, dtype=np.uint8))
+        self.audioTool.receiveMMicPingPong[self.audioTool.recviveMMicFlag][
+        self.indexMMic * len:len * (self.indexMMic + 1)] = copy.deepcopy(np.frombuffer(data, dtype=np.uint8))
+        if self.audioTool.isAECCase is True and self.audioTool.isAECRT is True:
+            self.audioTool.aecMMicQ.put(self.PlotDataAdc[self.dataIndex * len:(self.dataIndex + 1) * len])
+
         self.dataIndex += 1
-        self.index += 1
-        if self.index == 10000:
-            if self.audioTool.recviveFlag == 0:
-                self.audioTool.recviveFlag = 1
-                self.audioTool.storeFlag == 0
-            elif self.audioTool.recviveFlag == 1:
-                self.audioTool.recviveFlag = 0
-                self.audioTool.storeFlag == 1
-            self.index = 0
+        self.indexMMic += 1
+        if self.indexMMic == 66207:
+            if self.audioTool.recviveMMicFlag == 0:
+                self.audioTool.recviveMMicFlag = 1
+                self.audioTool.storeMMicFlag == 0
+            elif self.audioTool.recviveMMicFlag == 1:
+                self.audioTool.recviveMMicFlag = 0
+                self.audioTool.storeMMicFlag == 1
+            self.indexMMic = 0
 
         if self.dataIndex == 6:
             self.dataIndex = 0
@@ -348,45 +363,50 @@ class DataShow:
         # return self.fp.read()
         data = self.fp.read(1536)
         self.PlotDataAdc[0:1392] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.audioTool.receivePingPong[self.audioTool.recviveFlag][self.index*1392:1392*(self.index+1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.index += 1
+        self.audioTool.receiveMMicPingPong[self.audioTool.recviveMMicFlag][
+        self.indexMMic * 1392:1392 * (self.indexMMic + 1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
+        self.indexMMic += 1
 
         data = self.fp.read(1536)
         self.PlotDataAdc[1392:1392 * 2] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.audioTool.receivePingPong[self.audioTool.recviveFlag][self.index*1392:1392*(self.index+1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.index += 1
-
+        self.audioTool.receiveMMicPingPong[self.audioTool.recviveMMicFlag][
+        self.indexMMic * 1392:1392 * (self.indexMMic + 1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
+        self.indexMMic += 1
 
         data = self.fp.read(1536)
         self.PlotDataAdc[1392 * 2:1392 * 3] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.audioTool.receivePingPong[self.audioTool.recviveFlag][self.index * 1392:1392 * (self.index+1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.index += 1
+        self.audioTool.receiveMMicPingPong[self.audioTool.recviveMMicFlag][
+        self.indexMMic * 1392:1392 * (self.indexMMic + 1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
+        self.indexMMic += 1
 
         data = self.fp.read(1536)
         self.PlotDataAdc[1392 * 3:1392 * 4] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.audioTool.receivePingPong[self.audioTool.recviveFlag][self.index * 1392:1392 * (self.index + 1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.index += 1
+        self.audioTool.receiveMMicPingPong[self.audioTool.recviveMMicFlag][
+        self.indexMMic * 1392:1392 * (self.indexMMic + 1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
+        self.indexMMic += 1
 
         data = self.fp.read(1536)
         self.PlotDataAdc[1392 * 4:1392 * 5] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.audioTool.receivePingPong[self.audioTool.recviveFlag][self.index * 1392:1392 * (self.index + 1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.index += 1
+        self.audioTool.receiveMMicPingPong[self.audioTool.recviveMMicFlag][
+        self.indexMMic * 1392:1392 * (self.indexMMic + 1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
+        self.indexMMic += 1
 
         data = self.fp.read(1536)
         self.PlotDataAdc[1392 * 5:1392 * 6] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.audioTool.receivePingPong[self.audioTool.recviveFlag][self.index * 1392:1392 * (self.index + 1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
-        self.index += 1
+        self.audioTool.receiveMMicPingPong[self.audioTool.recviveMMicFlag][
+        self.indexMMic * 1392:1392 * (self.indexMMic + 1)] = copy.deepcopy(np.frombuffer(data[8:1400], dtype=np.uint8))
+        self.indexMMic += 1
 
-        if self.index == 10000:
-            if self.audioTool.recviveFlag == 0:
-                self.audioTool.recviveFlag = 1
-                self.audioTool.storeFlag == 0
-            elif self.audioTool.recviveFlag == 1:
-                self.audioTool.recviveFlag = 0
-                self.audioTool.storeFlag == 1
+        if self.indexMMic == 10000:
+            if self.audioTool.recviveMMicFlag == 0:
+                self.audioTool.recviveMMicFlag = 1
+                self.audioTool.storeMMicFlag == 0
+            elif self.audioTool.recviveMMicFlag == 1:
+                self.audioTool.recviveMMicFlag = 0
+                self.audioTool.storeMMicFlag == 1
 
         if self.count != 3:
-            self.count = self.count +1
+            self.count = self.count + 1
             return None
 
         self.count = 0
@@ -394,8 +414,9 @@ class DataShow:
 
     def reset(self):
         self.count = 0
-        self.index = 0
+        self.indexMMic = 0
+        self.indexBMic = 0
         self.dataIndex = 0
+
     def dataProcess(self, data):
         pass
-
