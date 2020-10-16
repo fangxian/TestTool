@@ -351,7 +351,6 @@ class AudioToolUI(Ui_MainWindow):
                     elif strstr[0:4] == "bdat":
                         len = int(strstr[4:8])
                         self.dataShow.storeAecBMicData(str1[8:8 + len], len)
-
                     # self.log(str(str1, encoding="utf-8"))
                 # time.sleep(0.001)
 
